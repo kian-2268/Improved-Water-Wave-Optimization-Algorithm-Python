@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WWO — Water Wave Optimization Live Benchmark</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne+Mono&family=Syne:wght@400;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0e;
+    --panel: #0b1318;
+    --border: #1a2e3a;
+    --accent-b: #00c9ff;
+    --accent-i: #ff6b35;
+    --accent-b-dim: rgba(0,201,255,0.12);
+    --accent-i-dim: rgba(255,107,53,0.12);
+    --text: #e8f4f8;
+    --muted: #5a7a8a;
+    --grid: rgba(26,46,58,0.5);
+    --good: #00ff9d;
+    --warn: #ffcc00;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 24px 32px 60px; }
+
+  header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 16px 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+  }
+  .logo-block h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(28px, 4vw, 52px);
+    letter-spacing: -1px; line-height: 1;
+    background: linear-gradient(135deg, var(--accent-b) 0%, #fff 60%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .logo-block p {
+    font-family: 'Syne Mono', monospace; font-size: 11px; color: var(--muted);
+    margin-top: 4px; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .legend { display: flex; gap: 24px; align-items: center; padding-bottom: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-b { background: var(--accent-b); box-shadow: 0 0 8px var(--accent-b); }
+  .dot-i { background: var(--accent-i); box-shadow: 0 0 8px var(--accent-i); }
+
+  .config-section { margin-bottom: 28px; }
+  .config-section-title {
+    font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .config-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .config-card label {
+    display: block; font-family: 'Syne Mono', monospace; font-size: 10px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
+  }
+  .fixed-val { font-family: 'Syne Mono', monospace; font-size: 18px; font-weight: 700; color: var(--accent-b); }
+  .fixed-sub { font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .func-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .func-pill {
+    padding: 5px 12px; border-radius: 2px; font-family: 'Syne Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); transition: all 0.15s;
+  }
+  .func-pill.active { background: var(--accent-b-dim); color: var(--accent-b); border-color: var(--accent-b); }
+  .func-pill:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+  .size-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .size-pill {
+    padding: 6px 14px; border-radius: 2px; font-family: 'Syne Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); transition: all 0.15s;
+  }
+  .size-pill.active { background: var(--accent-b-dim); color: var(--accent-b); border-color: var(--accent-b); }
+  .size-pill:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+
+  .actions { display: flex; gap: 12px; margin-bottom: 32px; }
+  .btn { padding: 12px 28px; border-radius: 4px; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-run { background: var(--accent-b); color: #000; }
+  .btn-run:hover { filter: brightness(1.2); transform: translateY(-1px); }
+  .btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-reset:hover { border-color: var(--muted); color: var(--text); }
+
+  .status-bar { display: flex; align-items: center; gap: 12px; font-family: 'Syne Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 32px; min-height: 20px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); animation: pulse 1s ease infinite; display: none; }
+  .pulse.active { display: block; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .panel-title { font-size: 11px; font-family: 'Syne Mono', monospace; letter-spacing: 2px; text-transform: uppercase; }
+  .panel-title.baseline { color: var(--accent-b); }
+  .panel-title.improved { color: var(--accent-i); }
+  .panel-badge { font-family: 'Syne Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 2px; letter-spacing: 1px; }
+  .badge-b { background: var(--accent-b-dim); color: var(--accent-b); border: 1px solid var(--accent-b); }
+  .badge-i { background: var(--accent-i-dim); color: var(--accent-i); border: 1px solid var(--accent-i); }
+  canvas { display: block; width: 100%; }
+  .wave-canvas-wrap { position: relative; height: 180px; }
+  .wave-canvas-wrap canvas { position: absolute; inset: 0; height: 100%; width: 100%; }
+  /* 5 metrics now */
+  .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--border); }
+  .metric { padding: 14px 10px; border-right: 1px solid var(--border); }
+  .metric:last-child { border-right: none; }
+  .metric-label { font-family: 'Syne Mono', monospace; font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .metric-val { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .metric-val.b { color: var(--accent-b); }
+  .metric-val.i { color: var(--accent-i); }
+  .iter-bar-wrap { padding: 0 20px 12px; border-top: 1px solid var(--border); }
+  .iter-bar-label { font-family: 'Syne Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; padding-top: 10px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .iter-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .iter-fill { height: 100%; border-radius: 2px; transition: width 0.05s linear; width: 0%; }
+  .iter-fill.b { background: var(--accent-b); }
+  .iter-fill.i { background: var(--accent-i); }
+
+  .chart-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .chart-title { font-family: 'Syne Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text); }
+
+  .table-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; font-family: 'Syne Mono', monospace; font-size: 12px; }
+  thead tr { background: rgba(26,46,58,0.8); }
+  th { padding: 12px 16px; text-align: left; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 400; }
+  td { padding: 11px 16px; border-bottom: 1px solid rgba(26,46,58,0.5); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .td-metric { color: var(--text); font-weight: 700; }
+  .td-b { color: var(--accent-b); }
+  .td-i { color: var(--accent-i); }
+  .td-winner { display: inline-block; padding: 2px 6px; border-radius: 2px; font-size: 9px; letter-spacing: 1px; }
+  .win-b { background: var(--accent-b-dim); color: var(--accent-b); }
+  .win-i { background: var(--accent-i-dim); color: var(--accent-i); }
+  .win-tie { background: rgba(255,204,0,0.1); color: var(--warn); }
+
+  .summary-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .summary-cell { padding: 20px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .summary-cell:nth-child(3n) { border-right: none; }
+  .summary-cell:nth-last-child(-n+3) { border-bottom: none; }
+  .summary-size { font-family: 'Syne Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .size-tag { padding: 2px 8px; border-radius: 2px; font-size: 9px; }
+  .tag-small { background: rgba(0,201,255,0.08); color: var(--accent-b); border: 1px solid rgba(0,201,255,0.3); }
+  .tag-medium { background: rgba(255,204,0,0.08); color: var(--warn); border: 1px solid rgba(255,204,0,0.3); }
+  .tag-large { background: rgba(255,107,53,0.08); color: var(--accent-i); border: 1px solid rgba(255,107,53,0.3); }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-family: 'Syne Mono', monospace; font-size: 11px; }
+  .summary-row-label { color: var(--muted); }
+  .summary-vals { display: flex; gap: 12px; }
+  .sv-b { color: var(--accent-b); font-weight: 700; }
+  .sv-i { color: var(--accent-i); font-weight: 700; }
+
+  .desc-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+  .desc-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .desc-body { padding: 24px 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .desc-block-title { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .desc-text { font-size: 13px; line-height: 1.7; color: var(--text); opacity: 0.85; }
+  .desc-text .hl-b { color: var(--accent-b); font-weight: 700; }
+  .desc-text .hl-i { color: var(--accent-i); font-weight: 700; }
+  .desc-verdict { margin-top: 20px; padding: 16px 20px; border-radius: 6px; border-left: 3px solid var(--good); background: rgba(0,255,157,0.05); }
+  .desc-verdict-label { font-family: 'Syne Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--good); margin-bottom: 6px; }
+  .desc-verdict-text { font-size: 13px; line-height: 1.6; color: var(--text); opacity: 0.9; }
+
+  @media (max-width: 900px) {
+    .desc-body { grid-template-columns: 1fr; }
+    .main-grid { grid-template-columns: 1fr; }
+    .config-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-cell { border-right: none; }
+    .summary-cell:nth-last-child(-n+3) { border-bottom: 1px solid var(--border); }
+    .summary-cell:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-block">
+      <h1>Water Wave Optimization</h1>
+      <p>Live Benchmark — Baseline vs. Improved · All 3 Sizes</p>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="dot dot-b"></div>Baseline WWO</div>
+      <div class="legend-item"><div class="dot dot-i"></div>Improved WWO</div>
+    </div>
+  </header>
+
+  <div class="config-section">
+    <div class="config-section-title">Fixed Configuration (locked per specification)</div>
+    <div class="config-grid">
+      <div class="config-card"><label>Dimensions</label><div class="fixed-val">5</div><div class="fixed-sub">dim = 5 · bounds [-5.12, 5.12]</div></div>
+      <div class="config-card"><label>Small Size</label><div class="fixed-val">20 × 50</div><div class="fixed-sub">pop = 20 · iter = 50</div></div>
+      <div class="config-card"><label>Medium Size</label><div class="fixed-val">100 × 60</div><div class="fixed-sub">pop = 100 · iter = 60</div></div>
+      <div class="config-card"><label>Large Size</label><div class="fixed-val">1000 × 100</div><div class="fixed-sub">pop = 1000 · iter = 100</div></div>
+      <div class="config-card"><label>Test Function</label><div class="func-pills"><button class="func-pill active" data-fn="sphere">Sphere</button><button class="func-pill" data-fn="rastrigin">Rastrigin</button><button class="func-pill" data-fn="rosenbrock">Rosenbrock</button><button class="func-pill" data-fn="ackley">Ackley</button></div></div>
+      <div class="config-card"><label>Run Size</label><div class="size-pills"><button class="size-pill active" data-sz="small">Small</button><button class="size-pill" data-sz="medium">Medium</button><button class="size-pill" data-sz="large">Large</button><button class="size-pill" data-sz="all">All 3</button></div></div>
+    </div>
+  </div>
+
+  <div class="actions"><button class="btn btn-run" id="runBtn">▶ Run Benchmark</button><button class="btn btn-reset" id="resetBtn">Reset</button></div>
+  <div class="status-bar"><div class="pulse" id="pulse"></div><span id="statusText">Select a function and size, then press Run.</span></div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title baseline">Baseline WWO</span><span class="panel-badge badge-b" id="badgeB">READY</span></div>
+      <div class="wave-canvas-wrap"><canvas id="waveB"></canvas></div>
+      <div class="iter-bar-wrap"><div class="iter-bar-label"><span>ITERATION PROGRESS</span><span id="iterLabelB">0 / 0</span></div><div class="iter-track"><div class="iter-fill b" id="iterFillB"></div></div></div>
+      <div class="metrics-row">
+        <div class="metric"><div class="metric-label">Best Fitness</div><div class="metric-val b" id="fitnessB">—</div></div>
+        <div class="metric"><div class="metric-label">Convergence</div><div class="metric-val b" id="convB">—</div></div>
+        <div class="metric"><div class="metric-label">Runtime (s)</div><div class="metric-val b" id="runtimeB">—</div></div>
+        <div class="metric"><div class="metric-label">Memory (GB)</div><div class="metric-val b" id="memoryB">—</div></div>
+        <div class="metric"><div class="metric-label">Iterations</div><div class="metric-val b" id="iterDoneB">—</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title improved">Improved WWO</span><span class="panel-badge badge-i" id="badgeI">READY</span></div>
+      <div class="wave-canvas-wrap"><canvas id="waveI"></canvas></div>
+      <div class="iter-bar-wrap"><div class="iter-bar-label"><span>ITERATION PROGRESS</span><span id="iterLabelI">0 / 0</span></div><div class="iter-track"><div class="iter-fill i" id="iterFillI"></div></div></div>
+      <div class="metrics-row">
+        <div class="metric"><div class="metric-label">Best Fitness</div><div class="metric-val i" id="fitnessI">—</div></div>
+        <div class="metric"><div class="metric-label">Convergence</div><div class="metric-val i" id="convI">—</div></div>
+        <div class="metric"><div class="metric-label">Runtime (s)</div><div class="metric-val i" id="runtimeI">—</div></div>
+        <div class="metric"><div class="metric-label">Memory (GB)</div><div class="metric-val i" id="memoryI">—</div></div>
+        <div class="metric"><div class="metric-label">Iterations</div><div class="metric-val i" id="iterDoneI">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-header">
+      <span class="chart-title">Convergence Curve — Best Fitness per Iteration</span>
+      <span style="font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted)" id="funcLabel">—</span>
+    </div>
+    <canvas id="convChart" height="240"></canvas>
+  </div>
+
+  <div class="table-panel">
+    <div class="chart-header"><span class="chart-title">Detailed Comparison</span><span id="tableLabel" style="font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted)">—</span></div>
+    <table><thead><tr><th>Metric</th><th>Baseline WWO</th><th>Improved WWO</th><th>Δ Improvement</th><th>Winner</th></tr></thead>
+    <tbody id="compTable"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Run benchmark to see results</td></tr></tbody></table>
+  </div>
+
+  <div class="desc-panel" id="descPanel" style="display:none">
+    <div class="desc-header"><span class="chart-title">Summary & Analysis</span><span id="descLabel" style="font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted)">—</span></div>
+    <div class="desc-body">
+      <div class="desc-block"><div class="desc-block-title">Algorithm Overview</div><div class="desc-text" id="descOverview">—</div></div>
+      <div class="desc-block"><div class="desc-block-title">Performance Analysis</div><div class="desc-text" id="descAnalysis">—</div><div class="desc-verdict" id="descVerdict"><div class="desc-verdict-label">Recommendation</div><div class="desc-verdict-text" id="descRec">—</div></div></div>
+    </div>
+  </div>
+
+  <div class="summary-panel" id="summaryPanel" style="display:none">
+    <div class="chart-header"><span class="chart-title">All-Size Summary</span><span id="summaryFuncLabel" style="font-family:'Syne Mono',monospace;font-size:10px;color:var(--muted)">—</span></div>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const clip = (x,lo,hi) => Math.max(lo, Math.min(hi, x));
+  const randNorm = (mu=0,sigma=1) => { let u=0,v=0; while(!u) u=Math.random(); while(!v) v=Math.random(); return mu+sigma*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const randCauchy = (scale=1) => scale*Math.tan(Math.PI*(Math.random()-0.5));
+  const randUniform = (a,b) => a+Math.random()*(b-a);
+  const fmtNum = v => (v===undefined||!isFinite(v)?'—':Math.abs(v)<0.001?v.toExponential(3):v.toPrecision(5));
+  // Runtime in seconds
+  const fmtSec = ms => (ms/1000).toFixed(3)+'s';
+  // Memory estimate in GB
+  const estimateMemGB = (pop, dim, iter) => {
+    const bytesPerFloat = 8;
+    const popMem = pop * dim * bytesPerFloat;
+    const convMem = iter * bytesPerFloat;
+    const overhead = 1.5;
+    return ((popMem + convMem) * overhead / (1024**3)).toFixed(6);
+  };
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+  const FitnessFunctions = {
+    sphere: x => x.reduce((s,v)=>s+v*v,0),
+    rastrigin: x => { const n=x.length; return 10*n+x.reduce((s,v)=>s+v*v-10*Math.cos(2*Math.PI*v),0); },
+    rosenbrock: x => { let s=0; for(let i=0;i<x.length-1;i++) s+=100*(x[i+1]-x[i]**2)**2+(1-x[i])**2; return s; },
+    ackley: x => { const n=x.length,s1=x.reduce((a,v)=>a+v*v,0),s2=x.reduce((a,v)=>a+Math.cos(2*Math.PI*v),0); return -20*Math.exp(-0.2*Math.sqrt(s1/n))-Math.exp(s2/n)+20+Math.E; }
+  };
+
+  const DIM = 5; const BOUNDS = [-5.12, 5.12];
+  const INPUT_SIZES = { small: {pop:20, iter:50}, medium: {pop:100, iter:60}, large: {pop:1000, iter:100} };
+
+  class BaselineWWO {
+    constructor(popSize, maxIter) { this.popSize=popSize; this.maxIter=maxIter; this.wlReduce=0.99; this.breakThresh=0.1; }
+    optimize(fitFn, dim, bounds, onIter) {
+      const [lo,hi]=bounds;
+      let pop=Array.from({length:this.popSize},()=>Array.from({length:dim},()=>randUniform(lo,hi)));
+      let fit=pop.map(fitFn);
+      let bestIdx=fit.indexOf(Math.min(...fit));
+      let bestSol=[...pop[bestIdx]], bestFit=fit[bestIdx];
+      let wl=new Array(this.popSize).fill(1);
+      const conv=[bestFit];
+      for(let iter=0; iter<this.maxIter; iter++) {
+        for(let i=0;i<this.popSize;i++) {
+          const nw=pop[i].map(v=>clip(v+randNorm(0,wl[i]),lo,hi));
+          const nf=fitFn(nw);
+          if(nf<fit[i]) { pop[i]=nw; fit[i]=nf; if(nf<bestFit){ bestSol=[...nw]; bestFit=nf; } wl[i]*=this.wlReduce; }
+          if(Math.abs(fit[i]-bestFit)<this.breakThresh) {
+            for(let k=0;k<5;k++) {
+              const bw=pop[i].map((v,d)=>clip(v+0.1*Math.random()*(bestSol[d]-v)*(Math.random()<0.5?-1:1),lo,hi));
+              const bf=fitFn(bw);
+              if(bf<fit[i]){ pop[i]=bw; fit[i]=bf; if(bf<bestFit){ bestSol=[...bw]; bestFit=bf; } }
+            }
+          }
+        }
+        conv.push(bestFit);
+        if(onIter) onIter(iter+1, bestFit, [...conv]);
+        if(conv.length>10 && Math.abs(conv[conv.length-1]-conv[conv.length-10])<1e-9) break;
+      }
+      return { bestFit, conv, iters: conv.length-1 };
+    }
+  }
+
+  class ImprovedWWO {
+    constructor(popSize, maxIter) { this.popSize=popSize; this.maxIter=maxIter; this.eliteRatio=0.1; this.initWl=1.0; this.wlDecay=0.98; this.localProb=0.3; }
+    _gammaFrac(n) {
+      if(n<0.5) return Math.PI/(Math.sin(Math.PI*n)*this._gammaFrac(1-n));
+      n--;
+      let x=0.99999999999980993, p=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+      for(let i=0;i<8;i++) x+=p[i]/(n+i+1);
+      const t=n+7.5;
+      return Math.sqrt(2*Math.PI)*Math.pow(t,n+0.5)*Math.exp(-t)*x;
+    }
+    _levyNoise(dim,scale) {
+      const beta=1.5, num=this._gammaFrac(1+beta)*Math.sin(Math.PI*beta/2), den=this._gammaFrac((1+beta)/2)*beta*Math.pow(2,(beta-1)/2), sigma=Math.pow(num/den,1/beta);
+      return Array.from({length:dim},()=>randNorm(0,sigma)*scale);
+    }
+    _adaptivePropagate(wave,wl,curWl,iter,maxIter,bounds){
+      const [lo,hi]=bounds, ss=curWl*(1-iter/maxIter);
+      let noise = wave.map(()=>randCauchy(1)*ss);
+      if(Math.random()<0.1){ const levy=this._levyNoise(wave.length,ss); noise.forEach((_,d)=>{noise[d]+=levy[d];}); }
+      return wave.map((v,d)=>clip(v+noise[d]*wl,lo,hi));
+    }
+    _chaosMut(wave,bounds){ const [lo,hi]=bounds, r=3.9; return wave.map(v=>{ let c=Math.random(); c=r*c*(1-c); return clip(v+(c-0.5)*(hi-lo)*0.2,lo,hi); }); }
+    _localSearch(wave,bestWave,bounds,fitFn){
+      const [lo,hi]=bounds, step=0.05*(hi-lo);
+      let best=[...wave], bestFit=fitFn(wave);
+      for(let k=0;k<5;k++){ const dir=wave.map(()=>[-1,0,1][Math.floor(Math.random()*3)]); const cand=wave.map((v,d)=>clip(v+dir[d]*step,lo,hi)); const cf=fitFn(cand); if(cf<bestFit){ best=cand; bestFit=cf; } }
+      return best;
+    }
+    optimize(fitFn,dim,bounds,onIter){
+      const [lo,hi]=bounds;
+      let pop=Array.from({length:this.popSize},()=>Array.from({length:dim},()=>randUniform(lo,hi)));
+      let fit=pop.map(fitFn);
+      let order=fit.map((_,i)=>i).sort((a,b)=>fit[a]-fit[b]);
+      pop=order.map(i=>pop[i]); fit=order.map(i=>fit[i]);
+      let bestSol=[...pop[0]], bestFit=fit[0], stag=0, wls=new Array(this.popSize).fill(this.initWl);
+      const conv=[bestFit];
+      for(let iter=0;iter<this.maxIter;iter++){
+        const prog=1-(iter/this.maxIter), curWl=this.initWl*(1+prog), nElite=Math.max(1,Math.floor(this.popSize*this.eliteRatio));
+        for(let i=nElite;i<this.popSize;i++){
+          let wave=this._adaptivePropagate(pop[i],wls[i],curWl,iter,this.maxIter,bounds);
+          let wf=fitFn(wave);
+          if(wf<fit[i]){ pop[i]=wave; fit[i]=wf; wls[i]*=this.wlDecay; if(wf<bestFit){ bestSol=[...wave]; bestFit=wf; stag=0; } else stag++; }
+          else { if(stag>10){ wave=this._chaosMut(pop[i],bounds); wf=fitFn(wave); if(wf<fit[i]){ pop[i]=wave; fit[i]=wf; } } stag++; }
+          if(Math.random()<this.localProb){ wave=this._localSearch(pop[i],bestSol,bounds,fitFn); wf=fitFn(wave); if(wf<fit[i]){ pop[i]=wave; fit[i]=wf; } }
+        }
+        order=fit.map((_,i)=>i).sort((a,b)=>fit[a]-fit[b]);
+        pop=order.map(i=>pop[i]); fit=order.map(i=>fit[i]);
+        if(fit[0]<bestFit){ bestSol=[...pop[0]]; bestFit=fit[0]; }
+        conv.push(bestFit);
+        if(onIter) onIter(iter+1, bestFit, [...conv]);
+        if(stag>25){ const nr=Math.floor(this.popSize/2), fresh=Array.from({length:nr},()=>Array.from({length:dim},()=>randUniform(lo,hi))); for(let k=0;k<nr;k++){ pop[this.popSize-1-k]=fresh[k]; fit[this.popSize-1-k]=fitFn(fresh[k]); } stag=0; }
+        if(conv.length>20 && Math.abs(conv[conv.length-1]-conv[conv.length-5])<1e-10) break;
+      }
+      return { bestFit, conv, iters: conv.length-1 };
+    }
+  }
+
+  class WaveAnimator {
+    constructor(canvas,color){ this.canvas=canvas; this.ctx=canvas.getContext('2d'); this.color=color; this.waves=[]; this.t=0; this.active=false; this._raf=null; this.resize(); window.addEventListener('resize',()=>this.resize()); }
+    resize(){ this.canvas.width=this.canvas.offsetWidth*devicePixelRatio; this.canvas.height=this.canvas.offsetHeight*devicePixelRatio; this.ctx.scale(devicePixelRatio,devicePixelRatio); }
+    start(){ this.active=true; this._loop(); }
+    stop(){ this.active=false; if(this._raf) cancelAnimationFrame(this._raf); }
+    reset(){ this.waves=[]; this.t=0; this.stop(); this.ctx.clearRect(0,0,this.canvas.offsetWidth,this.canvas.offsetHeight); }
+    notifyIter(fitness,maxFitness){ this.waves.push({age:0,energy:Math.min(1,Math.abs(fitness)/Math.max(1,maxFitness))}); }
+    _loop(){ if(!this.active)return; this._draw(); this._raf=requestAnimationFrame(()=>this._loop()); }
+    _draw(){
+      const c=this.canvas,ctx=this.ctx,W=c.offsetWidth,H=c.offsetHeight;
+      ctx.clearRect(0,0,W,H); ctx.fillStyle='rgba(11,19,24,0.6)'; ctx.fillRect(0,0,W,H);
+      this.t+=0.02;
+      for(let w=0;w<4;w++){
+        const phase=w*Math.PI/4,amp=12-w*2,freq=0.02+w*0.005,speed=this.t+phase;
+        const y0=H*0.5+w*8-12,alpha=(0.6-w*0.12)*(this.active?1:0.3);
+        ctx.beginPath();
+        for(let x=0;x<=W;x+=2){ const y=y0+amp*Math.sin(freq*x+speed)+(amp*0.4)*Math.sin(freq*2*x-speed*1.3); if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+        const rgb=this.color;
+        ctx.strokeStyle=rgb.replace('rgb(','rgba(').replace(')',`,${alpha})`); ctx.lineWidth=2-w*0.3; ctx.stroke();
+        ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+        ctx.fillStyle=rgb.replace('rgb(','rgba(').replace(')',`,${alpha*0.08})`); ctx.fill();
+      }
+      this.waves=this.waves.filter(w=>w.age<60);
+      this.waves.forEach(w=>{ const r=w.age*3,alpha=(1-w.age/60)*0.6*w.energy; ctx.beginPath(); ctx.arc(W/2,H/2,r,0,Math.PI*2); ctx.strokeStyle=this.color.replace('rgb(','rgba(').replace(')',`,${alpha})`); ctx.lineWidth=1.5; ctx.stroke(); w.age++; });
+      for(let p=0;p<8;p++){ const px=W*0.1+p*(W*0.1)+Math.sin(this.t+p)*15,py=H*0.5+Math.cos(this.t*0.8+p*0.7)*20; ctx.beginPath(); ctx.arc(px,py,2,0,Math.PI*2); ctx.fillStyle=this.color.replace('rgb(','rgba(').replace(')',',0.7)'); ctx.fill(); }
+    }
+  }
+
+  class ConvChart {
+    constructor(canvas){ this.canvas=canvas; this.ctx=canvas.getContext('2d'); this.bData=[]; this.iData=[]; }
+    update(bData,iData){ this.bData=bData; this.iData=iData; this._draw(); }
+    _draw(){
+      const c=this.canvas,ctx=this.ctx,W=c.offsetWidth||400,H=c.offsetHeight||240;
+      c.width=W*devicePixelRatio; c.height=H*devicePixelRatio; ctx.scale(devicePixelRatio,devicePixelRatio);
+      ctx.clearRect(0,0,W,H);
+      // More bottom padding for x-axis label
+      const pad={t:20,r:24,b:52,l:68},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+      if(pw<10||ph<10) return;
+      // Grid lines
+      ctx.strokeStyle='rgba(26,46,58,0.7)'; ctx.lineWidth=1;
+      for(let g=0;g<=4;g++){const y=pad.t+ph*g/4; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+pw,y); ctx.stroke();}
+      for(let g=0;g<=6;g++){const x=pad.l+pw*g/6; ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,pad.t+ph); ctx.stroke();}
+      const allVals=[...this.bData,...this.iData].filter(v=>isFinite(v));
+      if(!allVals.length) return;
+      const minV=Math.min(...allVals),maxV=Math.max(...allVals),range=maxV-minV||1;
+      const maxLen=Math.max(this.bData.length,this.iData.length);
+      const toX=i=>pad.l+pw*i/(maxLen-1||1);
+      const toY=v=>pad.t+ph*(1-(v-minV)/range);
+      const drawLine=(data,color)=>{ if(data.length<2) return; ctx.beginPath(); data.forEach((v,i)=>{ const x=toX(i),y=toY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.shadowBlur=0; ctx.stroke(); ctx.lineTo(toX(data.length-1),pad.t+ph); ctx.lineTo(pad.l,pad.t+ph); ctx.closePath(); ctx.fillStyle=color+'22'; ctx.fill(); };
+      drawLine(this.bData,'#00c9ff'); drawLine(this.iData,'#ff6b35');
+      // Y axis labels
+      ctx.fillStyle='rgba(90,122,138,0.9)'; ctx.font='10px Syne Mono,monospace'; ctx.textAlign='right';
+      for(let g=0;g<=4;g++){const v=minV+range*(1-g/4); ctx.fillText(fmtNum(v),pad.l-6,pad.t+ph*g/4+4);}
+      // X axis tick labels
+      ctx.textAlign='center';
+      for(let g=0;g<=6;g++){const xi=Math.floor(maxLen*g/6); ctx.fillText(xi,pad.l+pw*g/6,pad.t+ph+16);}
+      // X axis label "Iteration"
+      ctx.font='11px Syne Mono,monospace';
+      ctx.fillStyle='rgba(90,122,138,1)';
+      ctx.textAlign='center';
+      ctx.fillText('Iteration', pad.l+pw/2, H-8);
+      // Y axis label "Best Fitness"
+      ctx.save();
+      ctx.translate(14, pad.t+ph/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.textAlign='center';
+      ctx.font='11px Syne Mono,monospace';
+      ctx.fillText('Best Fitness', 0, 0);
+      ctx.restore();
+    }
+  }
+
+  let selectedFn='sphere', selectedSz='small', running=false;
+  const waveB=new WaveAnimator(document.getElementById('waveB'),'rgb(0,201,255)');
+  const waveI=new WaveAnimator(document.getElementById('waveI'),'rgb(255,107,53)');
+  const convChart=new ConvChart(document.getElementById('convChart'));
+
+  const setStatus=(msg,active=false)=>{ document.getElementById('statusText').textContent=msg; document.getElementById('pulse').classList.toggle('active',active); };
+  const resetUI=()=>{
+    waveB.reset(); waveI.reset();
+    ['fitnessB','fitnessI','convB','convI','runtimeB','runtimeI','memoryB','memoryI','iterDoneB','iterDoneI'].forEach(id=>document.getElementById(id).textContent='—');
+    ['iterFillB','iterFillI'].forEach(id=>document.getElementById(id).style.width='0%');
+    ['iterLabelB','iterLabelI'].forEach(id=>document.getElementById(id).textContent='0 / 0');
+    document.getElementById('badgeB').textContent='READY';
+    document.getElementById('badgeI').textContent='READY';
+    document.getElementById('compTable').innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Run benchmark to see results</td></tr>';
+    document.getElementById('summaryPanel').style.display='none';
+    document.getElementById('descPanel').style.display='none';
+    convChart.update([],[]);
+    setStatus('Reset. Select function and size, then run.');
+  };
+
+  const buildTable=(d)=>{
+    const winLabel=w=>w==='improved'?'<span class="td-winner win-i">IMPROVED</span>':w==='baseline'?'<span class="td-winner win-b">BASELINE</span>':'<span class="td-winner win-tie">TIE</span>';
+    const rows=[
+      {label:'Best Fitness',note:'Lower is better',b:fmtNum(d.bFit),i:fmtNum(d.iFit),delta:d.bFit!==0?(((d.bFit-d.iFit)/Math.abs(d.bFit))*100).toFixed(1)+'%':'—',winner:d.iFit<d.bFit?'improved':d.bFit<d.iFit?'baseline':'tie'},
+      {label:'Convergence Rate',note:'Higher is better',b:d.bConv.toFixed(2)+'%',i:d.iConv.toFixed(2)+'%',delta:(d.iConv-d.bConv).toFixed(2)+'%',winner:d.iConv>d.bConv?'improved':d.bConv>d.iConv?'baseline':'tie'},
+      {label:'Runtime (s)',note:'Lower is better',b:fmtSec(d.bRuntime),i:fmtSec(d.iRuntime),delta:(((d.bRuntime-d.iRuntime)/d.bRuntime)*100).toFixed(1)+'%',winner:d.iRuntime<d.bRuntime?'improved':d.bRuntime<d.iRuntime?'baseline':'tie'},
+      {label:'Memory (GB)',note:'Lower is better',b:d.bMem+'GB',i:d.iMem+'GB',delta:'—',winner:parseFloat(d.iMem)<parseFloat(d.bMem)?'improved':parseFloat(d.bMem)<parseFloat(d.iMem)?'baseline':'tie'},
+      {label:'Iterations Used',note:'Early stop efficient',b:d.bIters,i:d.iIters,delta:d.bIters-d.iIters,winner:d.iIters<d.bIters?'improved':d.bIters<d.iIters?'baseline':'tie'}
+    ];
+    document.getElementById('compTable').innerHTML=rows.map(r=>`<tr><td class="td-metric">${r.label}<br><span style="font-size:9px;color:var(--muted)">${r.note}</span></td><td class="td-b">${r.b}</td><td class="td-i">${r.i}</td><td style="color:var(--warn)">${r.delta}</td><td>${winLabel(r.winner)}</td></tr>`).join('');
+  };
+
+  const buildDescription=(fnName,szName,d)=>{
+    const fnN=fnName.charAt(0).toUpperCase()+fnName.slice(1);
+    const winnerFit=d.iFit<d.bFit?'Improved':'Baseline';
+    document.getElementById('descOverview').innerHTML=`<span class="hl-b">${fnN}</span> function on <strong>${szName}</strong> size. ${winnerFit} WWO achieved better final fitness (${fmtNum(Math.min(d.bFit,d.iFit))}).`;
+    document.getElementById('descAnalysis').innerHTML=`Fitness delta: ${((d.bFit-d.iFit)/Math.abs(d.bFit)*100).toFixed(1)}% improvement. Runtime ratio: ${(d.iRuntime/d.bRuntime).toFixed(2)}x. Memory ratio: ${(parseFloat(d.iMem)/parseFloat(d.bMem)).toFixed(2)}x.`;
+    document.getElementById('descRec').innerHTML=winnerFit==='Improved'?`<span class="hl-i">Improved WWO</span> recommended for this configuration.`:`<span class="hl-b">Baseline WWO</span> is sufficient.`;
+    document.getElementById('descPanel').style.display='block';
+  };
+
+  const buildSummary=(fnName,allData)=>{
+    const tagClass={small:'tag-small',medium:'tag-medium',large:'tag-large'};
+    document.getElementById('summaryGrid').innerHTML=allData.map(d=>`<div class="summary-cell"><div class="summary-size"><span>POP ${INPUT_SIZES[d.szName].pop} · ITER ${INPUT_SIZES[d.szName].iter}</span><span class="size-tag ${tagClass[d.szName]}">${d.szName.toUpperCase()}</span></div><div class="summary-row"><span class="summary-row-label">Best Fitness</span><div class="summary-vals"><span class="sv-b">${fmtNum(d.bFit)}</span><span class="sv-i">${fmtNum(d.iFit)}</span></div></div><div class="summary-row"><span class="summary-row-label">Runtime (s)</span><div class="summary-vals"><span class="sv-b">${fmtSec(d.bRuntime)}</span><span class="sv-i">${fmtSec(d.iRuntime)}</span></div></div><div class="summary-row"><span class="summary-row-label">Memory (GB)</span><div class="summary-vals"><span class="sv-b">${d.bMem}GB</span><span class="sv-i">${d.iMem}GB</span></div></div></div>`).join('');
+    document.getElementById('summaryFuncLabel').textContent=fnName.toUpperCase();
+    document.getElementById('summaryPanel').style.display='block';
+  };
+
+  const runOnce=async(fnName,szName)=>{
+    const fitFn=FitnessFunctions[fnName];
+    const {pop,iter}=INPUT_SIZES[szName];
+    let bConv=[], iConv=[];
+    document.getElementById('funcLabel').textContent=`${fnName.toUpperCase()} | ${szName.toUpperCase()} | pop=${pop} | iter=${iter}`;
+    document.getElementById('tableLabel').textContent=`${fnName.toUpperCase()} · ${szName.toUpperCase()}`;
+    document.getElementById('badgeB').textContent='RUNNING';
+    setStatus(`Baseline ${fnName} ${szName}...`,true);
+    await sleep(10);
+    document.getElementById('iterLabelB').textContent=`0 / ${iter}`;
+    document.getElementById('iterLabelI').textContent=`0 / ${iter}`;
+
+    // Baseline
+    const t0=performance.now();
+    const baseline=new BaselineWWO(pop,iter);
+    await new Promise(res=>baseline.optimize(fitFn,DIM,BOUNDS,(it,fit,conv)=>{
+      bConv=[...conv];
+      document.getElementById('fitnessB').textContent=fmtNum(fit);
+      document.getElementById('iterDoneB').textContent=it;
+      document.getElementById('iterFillB').style.width=(it/iter*100)+'%';
+      document.getElementById('iterLabelB').textContent=`${it}/${iter}`;
+      waveB.notifyIter(fit,conv[0]);
+      convChart.update(bConv,iConv);
+      if(it===iter||it===conv.length-1) res();
+    }));
+    const bRuntime=performance.now()-t0;
+    const bMem=estimateMemGB(pop,DIM,iter);
+    document.getElementById('runtimeB').textContent=fmtSec(bRuntime);
+    document.getElementById('memoryB').textContent=bMem+'GB';
+    const bConvRate=bConv.length>1?(bConv[0]-bConv[bConv.length-1])/Math.max(1,Math.abs(bConv[0]))*100:0;
+    document.getElementById('convB').textContent=bConvRate.toFixed(1)+'%';
+    document.getElementById('badgeB').textContent='DONE';
+
+    setStatus(`Improved ${fnName} ${szName}...`,true);
+    document.getElementById('badgeI').textContent='RUNNING';
+
+    // Improved
+    const t2=performance.now();
+    const improved=new ImprovedWWO(pop,iter);
+    await new Promise(res=>improved.optimize(fitFn,DIM,BOUNDS,(it,fit,conv)=>{
+      iConv=[...conv];
+      document.getElementById('fitnessI').textContent=fmtNum(fit);
+      document.getElementById('iterDoneI').textContent=it;
+      document.getElementById('iterFillI').style.width=(it/iter*100)+'%';
+      document.getElementById('iterLabelI').textContent=`${it}/${iter}`;
+      waveI.notifyIter(fit,conv[0]);
+      convChart.update(bConv,iConv);
+      if(it===iter||it===conv.length-1) res();
+    }));
+    const iRuntime=performance.now()-t2;
+    const iMem=estimateMemGB(pop,DIM,iter);
+    document.getElementById('runtimeI').textContent=fmtSec(iRuntime);
+    document.getElementById('memoryI').textContent=iMem+'GB';
+    const iConvRate=iConv.length>1?(iConv[0]-iConv[iConv.length-1])/Math.max(1,Math.abs(iConv[0]))*100:0;
+    document.getElementById('convI').textContent=iConvRate.toFixed(1)+'%';
+    document.getElementById('badgeI').textContent='DONE';
+
+    convChart.update(bConv,iConv);
+    const finalB=bConv[bConv.length-1], finalI=iConv[iConv.length-1];
+    buildTable({bFit:finalB,iFit:finalI,bConv:bConvRate,iConv:iConvRate,bRuntime,iRuntime,bMem,iMem,bIters:bConv.length-1,iIters:iConv.length-1});
+    buildDescription(fnName,szName,{bFit:finalB,iFit:finalI,bConv:bConvRate,iConv:iConvRate,bRuntime,iRuntime,bMem,iMem});
+    return {szName,bFit:finalB,iFit:finalI,bConvRate,iConvRate,bRuntime,iRuntime,bMem,iMem,bIters:bConv.length-1,iIters:iConv.length-1};
+  };
+
+  const runBenchmark=async()=>{
+    if(running)return; running=true;
+    document.getElementById('runBtn').disabled=true;
+    waveB.start(); waveI.start();
+    document.getElementById('summaryPanel').style.display='none';
+    if(selectedSz==='all'){
+      const allData=[];
+      for(const sz of ['small','medium','large']){ const res=await runOnce(selectedFn,sz); allData.push(res); }
+      buildSummary(selectedFn,allData);
+      setStatus('All 3 sizes complete.',false);
+    } else {
+      await runOnce(selectedFn,selectedSz);
+      setStatus('Benchmark complete.',false);
+    }
+    running=false; document.getElementById('runBtn').disabled=false;
+  };
+
+  document.querySelectorAll('.func-pill').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.func-pill').forEach(b=>b.classList.remove('active')); b.classList.add('active'); selectedFn=b.dataset.fn; }));
+  document.querySelectorAll('.size-pill').forEach(b=>b.addEventListener('click',()=>{ document.querySelectorAll('.size-pill').forEach(b=>b.classList.remove('active')); b.classList.add('active'); selectedSz=b.dataset.sz; }));
+  document.getElementById('runBtn').addEventListener('click',runBenchmark);
+  document.getElementById('resetBtn').addEventListener('click',resetUI);
+  window.addEventListener('resize',()=>{ waveB.resize(); waveI.resize(); convChart.update([],[]); });
+  resetUI();
+})();
+</script>
+</body>
+</html>
